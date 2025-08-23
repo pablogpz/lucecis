@@ -78,11 +78,10 @@ export function useWebSocketConnection() {
 
     const connect = () => {
         try {
-            const wsPort = parseInt(process.env.NEXT_PUBLIC_WS_PORT || '8080')
+            const wsPort = parseInt(process.env.NEXT_PUBLIC_WS_PORT || '3010');
             const wsUrl = `${process.env.NODE_ENV === 'production'
                 ? `wss://${window.location.hostname}`
-                : `ws://${process.env.NEXT_PUBLIC_WS_HOST || 'localhost'}:${wsPort}`}
-                /lucecis/ws`;
+                : `ws://${process.env.NEXT_PUBLIC_WS_HOST || 'localhost'}:${wsPort}`}/lucecis/ws`;
 
             const ws = new WebSocket(wsUrl);
             wsRef.current = ws;

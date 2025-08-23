@@ -1,13 +1,11 @@
 # Lucecis - Deployment Guide for Raspberry Pi 5
 
-This guide will help you deploy the Lucecis webapp to your Raspberry Pi 5 and serve it securely to the internet.
-
 ## Prerequisites
 
 - Raspberry Pi 5 with Home Assistant OS running
 - DDNS domain configured and pointing to your public IP
 - Router with port forwarding capabilities
-- Your girlfriend's residential IP address for whitelisting
+- Users' residential IP addresses for whitelisting
 
 ## Network Architecture
 
@@ -16,7 +14,7 @@ Internet → Router (NAT/Port Forwarding) → Raspberry Pi 5
 ├── Home Assistant (port 8123)
 ├── Nginx Reverse Proxy (ports 80/443)
 ├── Next.js App (port 3000)
-└── WebSocket Server (port 8080)
+└── WebSocket Server (port 3010)
 ```
 
 ## Quick Deployment
@@ -43,7 +41,7 @@ Internet → Router (NAT/Port Forwarding) → Raspberry Pi 5
    ```bash
    sudo nano /etc/nginx/sites-available/lucecis
    # Replace YOUR_DDNS_DOMAIN with your actual domain
-   # Replace XXX.XXX.XXX.XXX with your girlfriend's IP
+   # Replace XXX.XXX.XXX.XXX with your users' IP addresses
    ```
 
 5. **Start services:**
@@ -62,119 +60,13 @@ Internet → Router (NAT/Port Forwarding) → Raspberry Pi 5
     - Forward port 80 → Raspberry Pi IP:80
     - Forward port 443 → Raspberry Pi IP:443
 
-## Detailed Setup Instructions
-
-### 1. Prepare the Raspberry Pi
-
-```bash
-# Update system
-sudo apt update && sudo apt upgrade -y
-
-# Install Node.js 24+
-curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
-sudo apt-get install -y nodejs
-
-# Install PM2 process manager
-sudo npm install -g pm2
-
-# Install Nginx
-sudo apt install -y nginx
-```
-
-### 2. Deploy the Application
-
-```bash
-# Create app directory
-sudo mkdir -p /app_folder
-sudo chown user:user /app_folder
-
-# Transfer your project files to this directory
-# Install dependencies
-cd /app_folder
-npm install
-
-# Build for production
-npm run build
-```
-
-### 3. Environment Configuration
-
-Create `app_folder/.env`:
-
-```env
-# Home Assistant Configuration
-HA_URL=home_assistant_url_here
-HA_ACCESS_TOKEN=your_long_lived_access_token_here
-
-# WebSocket Server Configuration
-WS_PORT=port_number_here
-```
-
-### 4. Nginx Configuration
-
-The deployment script copies the nginx.conf to the right location. Update it with:
-
-```bash
-sudo nano /etc/nginx/sites-available/lucecis
-```
-
-Replace:
-
-- `YOUR_DDNS_DOMAIN` with your actual domain
-- `XXX.XXX.XXX.XXX` with your girlfriend's IP address
-
-### 5. SSL Certificate Setup (Recommended)
-
-```bash
-# Install Certbot
-sudo apt install -y certbot python3-certbot-nginx
-
-# Get certificate
-sudo certbot --nginx -d your-domain
-
-# Or use the provided script
-./setup-ssl.sh your-domain
-```
-
-### 6. Firewall Configuration
-
-```bash
-sudo ufw allow 80/tcp   # HTTP
-sudo ufw allow 443/tcp  # HTTPS
-sudo ufw allow 3000/tcp # Next.js (optional, internal)
-sudo ufw allow 8080/tcp # WebSocket (optional, internal)
-sudo ufw --force enable
-```
-
-### 7. Router Configuration
-
-Configure port forwarding on your router:
-
-- External Port 80 → Internal IP (Raspberry Pi):80
-- External Port 443 → Internal IP (Raspberry Pi):443
-
-### 8. Start Services
-
-```bash
-# Start the application processes
-npm run pm2:start
-
-# Start Nginx
-sudo systemctl start nginx
-sudo systemctl enable nginx
-
-# Check status
-pm2 status
-sudo systemctl status nginx
-```
-
 ## Security Features
 
 ### IP Whitelisting
 
-- Only your girlfriend's IP can access the application
+- Only your target users' IPs can access the application
 - Configured in Nginx at both HTTP and HTTPS levels
-- Easy to update when her IP changes
+- Easy to update when users' IP changes
 
 ### SSL/TLS Encryption
 

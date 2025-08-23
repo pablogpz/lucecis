@@ -32,7 +32,7 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Check if running as pi user
+# Check if running as service user
 if [ "$USER" != "$SERVICE_USER" ]; then
     print_error "This script should be run as the '$SERVICE_USER' user"
     exit 1
@@ -120,8 +120,6 @@ sudo rm -f /etc/nginx/sites-enabled/default
 print_status "Configuring firewall..."
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
-#sudo ufw allow 3000/tcp (internal; optional)
-#sudo ufw allow 8080/tcp (internal; optional)
 sudo ufw --force enable
 
 print_status "Deployment completed successfully!"

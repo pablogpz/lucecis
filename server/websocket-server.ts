@@ -8,6 +8,8 @@ import {
     HassEntity
 } from 'home-assistant-js-websocket';
 import dotenv from 'dotenv';
+import { incrementMetric, updateMetric } from './metrics';
+import { metricsServer } from './metrics-server'
 
 // Disable SSL verification for self-signed certificates
 process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
@@ -19,8 +21,8 @@ dotenv.config({ path: `.env${process.env.NODE_ENV === 'production' ? '.productio
 const HA_URL = process.env.HA_URL || 'http://localhost:8123';
 const ACCESS_TOKEN = process.env.HA_ACCESS_TOKEN || '';
 const WS_HOST = process.env.NEXT_PUBLIC_WS_HOST ? process.env.WS_HOST : '::';
-const WS_PORT = process.env.NEXT_PUBLIC_WS_PORT ? parseInt(process.env.NEXT_PUBLIC_WS_PORT) : 8080;
-
+const WS_PORT = process.env.NEXT_PUBLIC_WS_PORT ? parseInt(process.env.NEXT_PUBLIC_WS_PORT) : 3010;
+const METRICS_PORT = process.env.METRICS_PORT ? parseInt(process.env.METRICS_PORT) : 3020;
 // Do Not Disturb configuration (quiet hours: 1:00 AM to 9:00 AM)
 const DND_START_HOUR = 1;  // 1:00 AM
 const DND_END_HOUR = 9;    // 9:00 AM
@@ -126,12 +128,16 @@ class LightControlServer {
             console.log('Client connected');
             this.clients.add(ws);
 
+            // Update metrics
+            updateMetric('websocket_connections', this.clients.size);
+
             // Send current states to new client
             this.sendCurrentStates(ws);
 
             ws.on('message', (message: string) => {
                 try {
                     const data: ClientMessage = JSON.parse(message);
+                    incrementMetric('websocket_messages_received');
                     this.handleClientMessage(ws, data);
                 } catch (error) {
                     console.error('Error parsing message:', error);
@@ -142,11 +148,13 @@ class LightControlServer {
             ws.on('close', () => {
                 console.log('Client disconnected');
                 this.clients.delete(ws);
+                updateMetric('websocket_connections', this.clients.size);
             });
 
             ws.on('error', (error) => {
                 console.error('WebSocket error:', error);
                 this.clients.delete(ws);
+                updateMetric('websocket_connections', this.clients.size);
             });
         });
 
@@ -163,6 +171,7 @@ class LightControlServer {
             this.haConnection = await createConnection({ auth });
 
             console.log('Connected to Home Assistant');
+            updateMetric('homeassistant_connection_status', 1);
             this.broadcastConnectionStatus(true);
 
             // Get initial states
@@ -173,11 +182,13 @@ class LightControlServer {
 
             this.haConnection.addEventListener('disconnected', () => {
                 console.log('Disconnected from Home Assistant');
+                updateMetric('homeassistant_connection_status', 0);
                 this.broadcastConnectionStatus(false);
             });
 
         } catch (error) {
             console.error('Failed to connect to Home Assistant:', error);
+            updateMetric('homeassistant_connection_status', 0);
             this.broadcastConnectionStatus(false);
         }
     }
@@ -297,6 +308,9 @@ class LightControlServer {
         this.presenceState = presenceState;
         this.actualPresenceState = presenceState.state === 'on';
 
+        // Update metrics
+        updateMetric('presence_status', this.actualPresenceState ? 1 : 0);
+
         // Use effective presence state that considers DND
         const effectivePresence = this.getEffectivePresenceState();
         this.broadcastPresence(effectivePresence);
@@ -342,6 +356,11 @@ class LightControlServer {
         if (!this.haConnection) {
             throw new Error('Not connected to Home Assistant');
         }
+
+        // Track light commands and update timestamp
+        incrementMetric('light_commands_sent');
+        updateMetric('last_light_command_timestamp', Date.now());
+        incrementMetric('homeassistant_api_calls');
 
         switch (message.action) {
             case 'toggle':
@@ -489,6 +508,7 @@ class LightControlServer {
     private sendMessage(ws: WebSocket, message: ServerMessage) {
         if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify(message));
+            incrementMetric('websocket_messages_sent');
         }
     }
 
@@ -497,6 +517,7 @@ class LightControlServer {
         this.clients.forEach(client => {
             if (client.readyState === WebSocket.OPEN) {
                 client.send(messageStr);
+                incrementMetric('websocket_messages_sent');
             }
         });
     }
@@ -521,7 +542,12 @@ class LightControlServer {
      * Get the effective presence state (considers Do Not Disturb)
      */
     private getEffectivePresenceState(): boolean {
-        if (this.isDoNotDisturbTime()) {
+        const isDNDActive = this.isDoNotDisturbTime();
+
+        // Update DND metrics
+        updateMetric('do_not_disturb_active', isDNDActive ? 1 : 0);
+
+        if (isDNDActive) {
             console.log(`Do Not Disturb active (${DND_START_HOUR}:00-${DND_END_HOUR}:00), reporting absence`);
             return false; // Always report as absent during DND hours
         }
@@ -529,12 +555,17 @@ class LightControlServer {
     }
 }
 
-// Start the server
+// Start the WebSocket server
 const server = new LightControlServer();
+// Start the metrics HTTP server
+metricsServer.listen(METRICS_PORT, () => {
+    console.log(`Metrics HTTP server listening on port ${METRICS_PORT}`);
+});
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
     console.log('Received SIGINT signal, shutting down gracefully...');
+    metricsServer.close();
     await server.shutdown();
     process.exit(0);
 });

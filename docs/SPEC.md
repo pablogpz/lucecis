@@ -1,6 +1,6 @@
 # Preamble
 
-This document lays out the high-level specification of a webapp idea to control and visualize lighting devices
+This document lays out the high-level specification of a webapp idea to control and visualize light devices
 controlled by Home Assistant OS.
 
 ## For LLMs and AI agents
@@ -88,7 +88,7 @@ The backend acts as a secure bridge between the frontend and Home Assistant:
 * **WebSocket Server**: Exposes an unauthenticated WebSocket server on port 8080 for frontend connections, providing a
   secure abstraction layer.
 
-### Entity Configuration
+### Entity Reference
 
 * **Light Entities**:
     - Left light: `light.hue_play_left`
@@ -98,6 +98,8 @@ The backend acts as a secure bridge between the frontend and Home Assistant:
     - Effect script: `script.light_effect_activator`
 * **Presence Detection**:
     - Presence sensor: `binary_sensor.pablo_in_bedroom`
+* **Light Effects Script**:
+    - Script entity: `script.light_effect_activator`
 
 ### Communication Protocol
 
@@ -114,7 +116,8 @@ The backend acts as a secure bridge between the frontend and Home Assistant:
 
 ## Security Features
 
-* **IP Whitelisting**: Access restricted to specific IP addresses via Nginx configuration
+* **IP Whitelisting + mTLS**: Access restricted to specific IP addresses and mutual-TLS authentication via Nginx
+  configuration
 * **SSL/TLS Encryption**: HTTPS with Let's Encrypt certificates
 * **Isolated WebSocket**: Backend prevents direct Home Assistant API exposure
 * **Do Not Disturb**: Automatic blocking during quiet hours (1:00 AM - 9:00 AM)Configurable time window (default: 1:00
@@ -127,7 +130,7 @@ The backend acts as a secure bridge between the frontend and Home Assistant:
 
 ### Development Setup
 
-* **Scripts**: `npm run server` to start backend, `npm run dev:full` to run both frontend and backend concurrently
+* **Scripts**: `npm run server` to start backend, `npm run start:dev` to run both frontend and backend concurrently
 * **Environment**: Requires `HA_ACCESS_TOKEN` environment variable for Home Assistant authentication
 
 ## Deployment Architecture
@@ -136,14 +139,6 @@ The backend acts as a secure bridge between the frontend and Home Assistant:
 * **Reverse Proxy**: Nginx serving the app at `/lucecis` route
 * **Network Setup**: Router port forwarding (80/443) with DDNS domain
 * **SSL**: Automated certificate management with Certbot
-* **Monitoring**: PM2 process monitoring and Nginx access logging
-
-## WebSocket Protocol
-
-* **Frontend → Backend**: Action messages for light control (toggle, color, strobe, effects)
-* **Backend → Frontend**: Real-time updates for light states, presence detection, and script status
-* **Connection Management**: Automatic reconnection with 3-second intervals
-* **Error Handling**: Graceful degradation and timeout management for script activations
 
 ## Development vs Production
 
@@ -151,3 +146,10 @@ The backend acts as a secure bridge between the frontend and Home Assistant:
 * **Production**: WebSocket traffic routed through Nginx proxy at `/ws` endpoint
 * **Build Configuration**: Next.js standalone output with proper basePath for deployment
 * **Environment**: Secure environment variable management with dotenv
+
+## Monitoring Architecture
+
+- **Grafana** - Beautiful dashboards and visualization
+- **Prometheus** - Time-series database and metrics collection
+- **Node Exporter** - System metrics (CPU, RAM, disk, network)
+- **Custom App Metrics** - WebSocket connections, Home Assistant status
