@@ -5,15 +5,19 @@
 - **Grafana** - Beautiful dashboards and visualization
 - **Prometheus** - Time-series database and metrics collection
 - **Node Exporter** - System metrics (CPU, RAM, disk, network)
+- **Loki** - Log aggregation system
+- **Promtail** - Log collection agent
 - **Custom App Metrics** - WebSocket connections, Home Assistant status
 
 ## Architecture
 
 ```
 Raspberry Pi 5
-├── Grafana (port 9000) - Dashboards
+├── Grafana (port 9000) - Dashboards and visualization
 ├── Prometheus (port 9090) - Metrics database
 ├── Node Exporter (port 9100) - System metrics
+├── Loki (port 9095) - Log aggregation
+├── Promtail (port 9105) - Log collection
 └── Lucecis Metrics Server (port 3020) - App metrics
      └── /metrics - Exposes custom metrics
 ```
@@ -30,7 +34,7 @@ Raspberry Pi 5
     - URL: `http://localhost:9000/grafana/`
     - Default login: admin/admin (change on first login)
 
-3. **Pre-configured dashboards are imported automatically**
+3. **Pre-configured dashboards and data sources are imported automatically**
 
 ## Available Dashboards
 
@@ -57,11 +61,36 @@ Raspberry Pi 5
 - API call rates
 - Presence and DND correlation
 
+### 4. Logs Overview
+
+- PM2 logs
+- Application logs (PM2 managed)
+- NGINX access and error logs
+- Log rates and error rates
+- Real-time log streaming
+
+## Data Sources
+
+- **Prometheus** (http://localhost:9090) - Metrics
+- **Loki** (http://localhost:9095) - Logs
+
+## Log Collection
+
+Promtail collects logs from:
+
+- `/home/pi/.pm2/pm2.log` - PM2 logs
+- `/home/pi/.pm2/logs/lucecis-*.log` - Application logs
+- `/var/log/nginx/access.log` - NGINX access logs
+- `/var/log/nginx/error.log` - NGINX error logs
+
 All configuration files are automatically created by the setup script:
 
 - `/etc/prometheus/prometheus.yml` - Prometheus configuration
 - `/etc/systemd/system/prometheus.service` - Prometheus service
 - `/etc/systemd/system/node_exporter.service` - Node Exporter service
+- `/etc/loki/loki.yml` - Loki configuration
+- `/etc/systemd/system/loki.service` - Loki service
+- `/etc/systemd/system/promtail.service` - Promtail service
 - `/etc/grafana/grafana.ini` - Grafana configuration
 
 ```bash
@@ -69,16 +98,22 @@ All configuration files are automatically created by the setup script:
 sudo systemctl status prometheus
 sudo systemctl status node_exporter
 sudo systemctl status grafana-server
+sudo systemctl status loki
+sudo systemctl status promtail
 
 # View logs
 sudo journalctl -u prometheus -f
 sudo journalctl -u node_exporter -f
 sudo journalctl -u grafana-server -f
+sudo journalctl -u loki -f
+sudo journalctl -u promtail -f
 
 # Restart services
 sudo systemctl restart prometheus
 sudo systemctl restart node_exporter
 sudo systemctl restart grafana-server
+sudo systemctl restart loki
+sudo systemctl restart promtail
 ```
 
 ## Troubleshooting

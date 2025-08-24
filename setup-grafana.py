@@ -23,8 +23,9 @@ def wait_for_grafana():
     return False
 
 def create_datasource():
-    """Create Prometheus data source"""
-    datasource = {
+    """Create Prometheus and Loki data sources"""
+    # Prometheus datasource
+    prometheus_datasource = {
         "name": "Prometheus",
         "type": "prometheus",
         "url": "http://localhost:9090",
@@ -36,13 +37,33 @@ def create_datasource():
         f"{GRAFANA_URL}/api/datasources",
         auth=(GRAFANA_USER, GRAFANA_PASSWORD),
         headers={"Content-Type": "application/json"},
-        data=json.dumps(datasource)
+        data=json.dumps(prometheus_datasource)
     )
 
     if response.status_code in [200, 409]:  # 409 = already exists
         print("✅ Prometheus datasource configured")
     else:
-        print(f"❌ Failed to create datasource: {response.text}")
+        print(f"❌ Failed to create Prometheus datasource: {response.text}")
+
+    # Loki datasource
+    loki_datasource = {
+        "name": "Loki",
+        "type": "loki",
+        "url": "http://localhost:9095",
+        "access": "proxy"
+    }
+
+    response = requests.post(
+        f"{GRAFANA_URL}/api/datasources",
+        auth=(GRAFANA_USER, GRAFANA_PASSWORD),
+        headers={"Content-Type": "application/json"},
+        data=json.dumps(loki_datasource)
+    )
+
+    if response.status_code in [200, 409]:  # 409 = already exists
+        print("✅ Loki datasource configured")
+    else:
+        print(f"❌ Failed to create Loki datasource: {response.text}")
 
 def import_dashboard(dashboard_file, title):
     """Import a dashboard"""

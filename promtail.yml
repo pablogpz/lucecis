@@ -1,0 +1,129 @@
+server:
+  http_listen_port: 9105
+  grpc_listen_port: 9106
+
+positions:
+  filename: /var/lib/promtail/positions.yaml
+
+clients:
+  - url: http://localhost:9095/loki/api/v1/push
+
+scrape_configs:
+  # PM2 logs
+  - job_name: pm2
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: pm2
+          __path__: /home/pi/.pm2/pm2.log
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<time_local>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}): (?P<domain>.*): (?P<message>.*)'
+      - labels:
+          domain:
+      - timestamp:
+          source: time_local
+          format: RFC3339
+      - output:
+          source: message
+
+  # Lucecis app - WebSocket Middleman Server - Output logs
+  - job_name: lucecis-websocket-output
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: lucecis-websocket-output
+          __path__: /var/log/pm2/lucecis-websocket-out-*.log
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<message>.*)'
+      - output:
+          source: message
+
+  # Lucecis app - WebSocket Middleman Server - Error logs
+  - job_name: lucecis-websocket-error
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: lucecis-websocket-error
+          __path__: /var/log/pm2/lucecis-websocket-error-*.log
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<message>.*)'
+      - output:
+          source: message
+
+  # Lucecis app - NextJS Server - Output logs
+  - job_name: lucecis-nextjs-output
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: lucecis-nextjs-output
+          __path__: /var/log/pm2/lucecis-nextjs-out-*.log
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<message>.*)'
+      - output:
+          source: message
+
+  # Lucecis app - NextJS Server - Error logs
+  - job_name: lucecis-nextjs-error
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: lucecis-nextjs-error
+          __path__: /var/log/pm2/lucecis-nextjs-error-*.log
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<message>.*)'
+      - output:
+          source: message
+
+  # NGINX access logs
+  - job_name: nginx-access
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: nginx-access
+          __path__: /var/log/nginx/access.log
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<remote_addr>\S+) \S+ \S+ \[(?P<time_local>[^\]]+)\] "(?P<method>\S+) (?P<path>\S+) (?P<protocol>\S+)" (?P<status>\d+) (?P<body_bytes_sent>\d+) "(?P<http_referer>[^"]*)" "(?P<http_user_agent>[^"]*)"'
+      - labels:
+          remote_addr:
+          method:
+          path:
+          protocol:
+          status:
+          body_bytes_sent:
+          http_referer:
+          http_user_agent:
+      - timestamp:
+          source: time_local
+          format: 02/Jan/2006:15:04:05 -0700
+
+  # NGINX error logs
+  - job_name: nginx-error
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: nginx-error
+          __path__: /var/log/nginx/error.log
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<time_local>\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}) \[(?P<level>\w+)\] (?P<pid>\d+)#(?P<tid>\d+): (?P<message>.*)'
+      - labels:
+          level:
+      - timestamp:
+          source: time_local
+          format: 2006/01/02 15:04:05
+          location: Europe/Madrid
+      - output:
+          source: message

@@ -41,6 +41,10 @@ sudo apt install -y wget curl
 print_status "👤 Creating system users..."
 sudo useradd --system --no-create-home --shell /bin/false prometheus || true
 sudo useradd --system --no-create-home --shell /bin/false node_exporter || true
+sudo useradd --system --no-create-home --shell /bin/false loki || true
+sudo useradd --system --no-create-home --shell /bin/false promtail || true
+# Add promtail to adm group for log access
+sudo usermod -aG adm promtail || true
 
 # Install Prometheus
 if ! command -v prometheus &> /dev/null; then
@@ -72,6 +76,37 @@ else
   print_status "🖥️ Node Exporter already installed, skipping..."
 fi
 
+# Install Loki
+if ! command -v loki &> /dev/null; then
+    print_status "📦 Installing Loki..."
+    cd /tmp
+    wget -q https://github.com/grafana/loki/releases/download/v3.5.3/loki-linux-arm64.zip
+    unzip -q loki-linux-arm64.zip
+    sudo mv loki-linux-arm64 /usr/local/bin/loki
+    sudo chown loki:loki /usr/local/bin/loki
+
+    # Create Loki directories
+    sudo mkdir -p /etc/loki /var/lib/loki
+    sudo chown -R loki:loki /etc/loki /var/lib/loki
+else
+    print_status "📦 Loki already installed, skipping..."
+fi
+
+# Install Promtail
+if ! command -v promtail &> /dev/null; then
+    print_status "📦 Installing Promtail..."
+    wget -q https://github.com/grafana/loki/releases/download/v3.5.3/promtail-linux-arm64.zip
+    unzip -q promtail-linux-arm64.zip
+    sudo mv promtail-linux-arm64 /usr/local/bin/promtail
+    sudo chown promtail:promtail /usr/local/bin/promtail
+
+    # Create Promtail directories
+    sudo mkdir -p /etc/promtail /var/lib/promtail
+    sudo chown -R promtail:promtail /etc/promtail /var/lib/promtail
+else
+    print_status "📦 Promtail already installed, skipping..."
+fi
+
 # Install Grafana
 print_status "📈 Installing Grafana..."
 wget -q -O - https://packages.grafana.com/gpg.key | sudo apt-key add -
@@ -86,9 +121,15 @@ sudo cp prometheus.yml /etc/prometheus/
 sudo cp prometheus.service /etc/systemd/system/
 sudo cp node_exporter.service /etc/systemd/system/
 sudo cp grafana.ini /etc/grafana/
+sudo cp loki.yml /etc/loki/
+sudo cp loki.service /etc/systemd/system/
+sudo cp promtail.yml /etc/promtail/
+sudo cp promtail.service /etc/systemd/system/
 
 # Set permissions
 sudo chown prometheus:prometheus /etc/prometheus/prometheus.yml
+sudo chown loki:loki /etc/loki/loki.yml
+sudo chown promtail:promtail /etc/promtail/promtail.yml
 
 # Enable and start services
 print_status "🔄 Starting services..."
@@ -96,10 +137,14 @@ sudo systemctl daemon-reload
 sudo systemctl enable prometheus
 sudo systemctl enable node_exporter
 sudo systemctl enable grafana-server
+sudo systemctl enable loki
+sudo systemctl enable promtail
 
 sudo systemctl start node_exporter
 sudo systemctl start prometheus
 sudo systemctl start grafana-server
+sudo systemctl start loki
+sudo systemctl start promtail
 
 # Wait for services to start
 print_status "⏳ Waiting for services to start..."
@@ -142,3 +187,5 @@ echo "🔧 Service management:"
 echo "   sudo systemctl status prometheus"
 echo "   sudo systemctl status node_exporter"
 echo "   sudo systemctl status grafana-server"
+echo "   sudo systemctl status loki"
+echo "   sudo systemctl status promtail"
