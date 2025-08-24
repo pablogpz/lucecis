@@ -10,7 +10,7 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-    title: "💡 Lucecis 💡",
+    title: "Lucecis (con 😿 Señor Miau)"
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
