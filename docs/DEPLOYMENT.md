@@ -90,6 +90,9 @@ Internet → Router (NAT/Port Forwarding) → Raspberry Pi 5
 
 - Main App: `https://your-domain/lucecis`
 - WebSocket: `wss://your-domain/lucecis/ws` (handled automatically)
+- Health Checks:
+   - Next.js App: `https://your-domain/lucecis/health`
+   - WebSocket/Metrics Server: `http://localhost:3020/health`
 
 ## Management Commands
 

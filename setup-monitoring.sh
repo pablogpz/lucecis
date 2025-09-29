@@ -41,6 +41,7 @@ sudo apt install -y wget curl
 print_status "👤 Creating system users..."
 sudo useradd --system --no-create-home --shell /bin/false prometheus || true
 sudo useradd --system --no-create-home --shell /bin/false node_exporter || true
+sudo useradd --system --no-create-home --shell /bin/false blackbox_exporter || true
 sudo useradd --system --no-create-home --shell /bin/false loki || true
 sudo useradd --system --no-create-home --shell /bin/false promtail || true
 # Add promtail to adm group for log access
@@ -107,6 +108,22 @@ else
     print_status "📦 Promtail already installed, skipping..."
 fi
 
+# Install Blackbox Exporter
+if ! command -v blackbox_exporter &> /dev/null; then
+    print_status "🔍 Installing Blackbox Exporter..."
+    cd /tmp
+    wget -q https://github.com/prometheus/blackbox_exporter/releases/download/v0.27.0/blackbox_exporter-0.27.0.linux-arm64.tar.gz
+    tar xzf blackbox_exporter-0.27.0.linux-arm64.tar.gz
+    sudo mv blackbox_exporter-0.27.0.linux-arm64/blackbox_exporter /usr/local/bin/
+    sudo chown blackbox_exporter:blackbox_exporter /usr/local/bin/blackbox_exporter
+
+    # Create Blackbox Exporter directories
+    sudo mkdir -p /etc/blackbox_exporter /var/lib/blackbox_exporter
+    sudo chown -R blackbox_exporter:blackbox_exporter /etc/blackbox_exporter /var/lib/blackbox_exporter
+else
+    print_status "🔍 Blackbox Exporter already installed, skipping..."
+fi
+
 # Install Grafana
 print_status "📈 Installing Grafana..."
 wget -q -O - https://packages.grafana.com/gpg.key | sudo apt-key add -
@@ -125,11 +142,14 @@ sudo cp loki.yml /etc/loki/
 sudo cp loki.service /etc/systemd/system/
 sudo cp promtail.yml /etc/promtail/
 sudo cp promtail.service /etc/systemd/system/
+sudo cp blackbox.yml /etc/blackbox_exporter/
+sudo cp blackbox_exporter.service /etc/systemd/system/
 
 # Set permissions
 sudo chown prometheus:prometheus /etc/prometheus/prometheus.yml
 sudo chown loki:loki /etc/loki/loki.yml
 sudo chown promtail:promtail /etc/promtail/promtail.yml
+sudo chown blackbox_exporter:blackbox_exporter /etc/blackbox_exporter/blackbox.yml
 
 # Enable and start services
 print_status "🔄 Starting services..."
@@ -139,12 +159,14 @@ sudo systemctl enable node_exporter
 sudo systemctl enable grafana-server
 sudo systemctl enable loki
 sudo systemctl enable promtail
+sudo systemctl enable blackbox_exporter
 
 sudo systemctl start node_exporter
 sudo systemctl start prometheus
 sudo systemctl start grafana-server
 sudo systemctl start loki
 sudo systemctl start promtail
+sudo systemctl start blackbox_exporter
 
 # Wait for services to start
 print_status "⏳ Waiting for services to start..."
@@ -189,3 +211,4 @@ echo "   sudo systemctl status node_exporter"
 echo "   sudo systemctl status grafana-server"
 echo "   sudo systemctl status loki"
 echo "   sudo systemctl status promtail"
+echo "   sudo systemctl status blackbox_exporter"

@@ -7,6 +7,7 @@
 - **Node Exporter** - System metrics (CPU, RAM, disk, network)
 - **Loki** - Log aggregation system
 - **Promtail** - Log collection agent
+- **Blackbox Exporter** - HTTP/HTTPS endpoint monitoring for health checks
 - **Custom App Metrics** - WebSocket connections, Home Assistant status
 
 ## Architecture
@@ -18,8 +19,10 @@ Raspberry Pi 5
 ├── Node Exporter (port 9100) - System metrics
 ├── Loki (port 9095) - Log aggregation
 ├── Promtail (port 9105) - Log collection
+├── Blackbox Exporter (port 9110) - Health check monitoring
 └── Lucecis Metrics Server (port 3020) - App metrics
-     └── /metrics - Exposes custom metrics
+     ├── /metrics - Exposes custom metrics
+     └── /health - Health check endpoint
 ```
 
 ## Quick Setup
@@ -88,6 +91,8 @@ All configuration files are automatically created by the setup script:
 - `/etc/prometheus/prometheus.yml` - Prometheus configuration
 - `/etc/systemd/system/prometheus.service` - Prometheus service
 - `/etc/systemd/system/node_exporter.service` - Node Exporter service
+- `/etc/blackbox_exporter/blackbox.yml` - Blackbox Exporter configuration
+- `/etc/systemd/system/blackbox_exporter.service` - Blackbox Exporter service
 - `/etc/loki/loki.yml` - Loki configuration
 - `/etc/systemd/system/loki.service` - Loki service
 - `/etc/systemd/system/promtail.service` - Promtail service
@@ -97,23 +102,26 @@ All configuration files are automatically created by the setup script:
 # Check service status
 sudo systemctl status prometheus
 sudo systemctl status node_exporter
-sudo systemctl status grafana-server
 sudo systemctl status loki
 sudo systemctl status promtail
+sudo systemctl status blackbox_exporter
+sudo systemctl status grafana-server
 
 # View logs
 sudo journalctl -u prometheus -f
 sudo journalctl -u node_exporter -f
-sudo journalctl -u grafana-server -f
 sudo journalctl -u loki -f
 sudo journalctl -u promtail -f
+sudo journalctl -u blackbox_exporter -f
+sudo journalctl -u grafana-server -f
 
 # Restart services
 sudo systemctl restart prometheus
 sudo systemctl restart node_exporter
-sudo systemctl restart grafana-server
 sudo systemctl restart loki
 sudo systemctl restart promtail
+sudo systemctl restart blackbox_exporter
+sudo systemctl restart grafana-server
 ```
 
 ## Troubleshooting

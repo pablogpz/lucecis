@@ -19,3 +19,24 @@ scrape_configs:
       - targets: [ 'localhost:3020' ]
     metrics_path: '/metrics'
     scrape_interval: 5s
+
+  # Health checks using blackbox_exporter
+  - job_name: 'blackbox'
+    metrics_path: /probe
+    params:
+      module: [ http_2xx ]
+    static_configs:
+      - targets:
+          - http://localhost:3000/lucecis/health  # NextJS web server health endpoint
+          - http://localhost:3020/health  # WebSocket server health endpoint (via HTTP metrics server)
+    relabel_configs:
+      - source_labels: [ __address__ ]
+        target_label: __param_target
+      - source_labels: [ __param_target ]
+        target_label: instance
+      - target_label: __address__
+        replacement: 127.0.0.1:9110  # blackbox_exporter address
+  # Blackbox_exporter itself
+  - job_name: 'blackbox_exporter'
+    static_configs:
+      - targets: [ '127.0.0.1:9110' ]

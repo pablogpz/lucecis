@@ -1,5 +1,3 @@
-const PROMETHEUS_KEY = 'lucecis';
-
 // Simple in-memory metrics store
 export const metrics = {
     websocket_connections: 0,
@@ -22,21 +20,24 @@ export function incrementMetric(key: keyof typeof metrics) {
     metrics[key]++;
 }
 
+
 export function getPrometheusMetrics(): string {
+    const PROMETHEUS_KEY = 'lucecis';
+
     const prometheusMetrics = Object.entries(metrics)
         .map(([key, value]) => `${PROMETHEUS_KEY}_${key} ${value}`)
         .join('\n');
 
     return `# HELP lucecis metrics for the Lucecis home automation app
-# TYPE lucecis_websocket_connections gauge
-# TYPE lucecis_websocket_messages_sent counter
-# TYPE lucecis_websocket_messages_received counter
-# TYPE lucecis_homeassistant_api_calls counter
-# TYPE lucecis_homeassistant_connection_status gauge
-# TYPE lucecis_presence_status gauge
-# TYPE lucecis_light_commands_sent counter
-# TYPE lucecis_uptime_seconds counter
-# TYPE lucecis_last_light_command_timestamp gauge
-# TYPE lucecis_do_not_disturb_active gauge
+# TYPE ${PROMETHEUS_KEY}_websocket_connections gauge
+# TYPE ${PROMETHEUS_KEY}_websocket_messages_sent counter
+# TYPE ${PROMETHEUS_KEY}_websocket_messages_received counter
+# TYPE ${PROMETHEUS_KEY}_homeassistant_api_calls counter
+# TYPE ${PROMETHEUS_KEY}_homeassistant_connection_status gauge
+# TYPE ${PROMETHEUS_KEY}_presence_status gauge
+# TYPE ${PROMETHEUS_KEY}_light_commands_sent counter
+# TYPE ${PROMETHEUS_KEY}_uptime_seconds counter
+# TYPE ${PROMETHEUS_KEY}_last_light_command_timestamp gauge
+# TYPE ${PROMETHEUS_KEY}_do_not_disturb_active gauge
 ${prometheusMetrics}`;
 }

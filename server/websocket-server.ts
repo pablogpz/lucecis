@@ -128,21 +128,24 @@ class LightControlServer {
             console.log('Client connected');
             this.clients.add(ws);
 
-            // Update metrics
-            updateMetric('websocket_connections', this.clients.size);
-
             // Send current states to new client
             this.sendCurrentStates(ws);
 
             ws.on('message', (message: string) => {
+                let data: ClientMessage | undefined = undefined;
                 try {
-                    const data: ClientMessage = JSON.parse(message);
-                    incrementMetric('websocket_messages_received');
-                    this.handleClientMessage(ws, data);
+                    data = JSON.parse(message);
                 } catch (error) {
                     console.error('Error parsing message:', error);
                     this.sendError(ws, 'Invalid message format');
+                    return;
                 }
+
+                if (data) {
+                    this.handleClientMessage(ws, data!);
+                }
+
+                incrementMetric('websocket_messages_received');
             });
 
             ws.on('close', () => {
@@ -156,6 +159,8 @@ class LightControlServer {
                 this.clients.delete(ws);
                 updateMetric('websocket_connections', this.clients.size);
             });
+
+            updateMetric('websocket_connections', this.clients.size);
         });
 
         console.log(`WebSocket server listening on ${WS_HOST}:${WS_PORT}`);
@@ -169,10 +174,10 @@ class LightControlServer {
 
             const auth = createLongLivedTokenAuth(HA_URL, ACCESS_TOKEN);
             this.haConnection = await createConnection({ auth });
+            this.broadcastConnectionStatus(true);
 
             console.log('Connected to Home Assistant');
             updateMetric('homeassistant_connection_status', 1);
-            this.broadcastConnectionStatus(true);
 
             // Get initial states
             await this.getInitialStates();
@@ -180,16 +185,22 @@ class LightControlServer {
             // Subscribe to entity changes
             await this.subscribeToEntityChanges();
 
+            this.haConnection.addEventListener('ready', () => {
+                this.broadcastConnectionStatus(true);
+                console.log('Reconnected to Home Assistant');
+                updateMetric('homeassistant_connection_status', 1);
+            });
+
             this.haConnection.addEventListener('disconnected', () => {
+                this.broadcastConnectionStatus(false);
                 console.log('Disconnected from Home Assistant');
                 updateMetric('homeassistant_connection_status', 0);
-                this.broadcastConnectionStatus(false);
             });
 
         } catch (error) {
+            this.broadcastConnectionStatus(false);
             console.error('Failed to connect to Home Assistant:', error);
             updateMetric('homeassistant_connection_status', 0);
-            this.broadcastConnectionStatus(false);
         }
     }
 
