@@ -9,7 +9,7 @@ interface LightEffect {
     icon: string;
     parameters?: {
         name: string;
-        type: 'slider' | 'color' | 'select';
+        type: 'slider' | 'color' | 'individual-colors' | 'select';
         unit?: string;
         options?: string[];
         min?: number;
@@ -34,10 +34,11 @@ const LIGHT_EFFECTS: LightEffect[] = [
     {
         id: 'color',
         name: 'Color',
-        description: 'Cambiar el color e intensidad de todas las luces',
+        description: 'Cambia el color e intensidad de las luces',
         icon: '🎨',
         parameters: [
-            { name: 'color', type: 'color', default: '#ff0000' },
+            { name: 'individual-colors', type: 'individual-colors', default: false },
+            { name: 'color', type: 'color', default: '#9900ff' },
             { name: 'intensidad', type: 'slider', min: 1, max: 255, default: 128 },
         ]
     },
@@ -81,21 +82,33 @@ export default function ControlPanel({
     const [selectedEffect, setSelectedEffect] = useState(LIGHT_EFFECTS[0]);
     const [parameters, setParameters] = useState<Record<string, any>>({});
     const [isTriggering, setIsTriggering] = useState(false);
+    const [isIndividualMode, setIsIndividualMode] = useState(false);
+    const [individualColors, setIndividualColors] = useState({ left: '#9900ff', center: '#9900ff', right: '#9900ff' });
 
     const handleTriggerEffect = async () => {
         // Check if script is active for script-based effects
         if (!isPresent || !isConnected || isTriggering || isActivatorActive) return;
 
-        const defaults = LIGHT_EFFECTS.find(effect => effect.id === selectedEffect.id)?.parameters
+        const defaults = LIGHT_EFFECTS
+            .find(effect => effect.id === selectedEffect.id)?.parameters
             ?.reduce((acc, curr) => ({ ...acc, [curr.name]: curr.default }), {});
-
         if (selectedEffect.id === 'efecto-luz') {
             // @ts-expect-error We know defaults is defined here
             defaults.efecto = EFFECT_NAME_TO_ID[defaults.efecto] || defaults.efecto;
         }
 
+        // For color effect, include individual mode state and colors
+        let effectParameters = { ...defaults, ...parameters };
+        if (selectedEffect.id === 'color') {
+            effectParameters = {
+                ...effectParameters,
+                isIndividualMode,
+                individualColors: isIndividualMode ? individualColors : undefined
+            };
+        }
+
+        onTriggerEffect(selectedEffect.id, effectParameters);
         setIsTriggering(true);
-        onTriggerEffect(selectedEffect.id, { ...defaults, ...parameters });
         setTimeout(() => setIsTriggering(false), 1000);
     };
 
@@ -104,6 +117,10 @@ export default function ControlPanel({
             value = EFFECT_NAME_TO_ID[value] || value;
 
         setParameters(prev => ({ ...prev, [name]: value }));
+    };
+
+    const updateIndividualColor = (lightId: string, color: string) => {
+        setIndividualColors(prev => ({ ...prev, [lightId]: color }));
     };
 
     return (
@@ -143,49 +160,99 @@ export default function ControlPanel({
             {selectedEffect.parameters && (
                 <div className="mb-6 space-y-4">
                     <h3 className="text-sm font-medium text-gray-700 mb-3">Parámetros</h3>
-                    {selectedEffect.parameters.map((param) => (
-                        <div key={param.name} className="space-y-2">
-                            <label className="text-xs font-medium text-gray-600 capitalize">
-                                {param.name}
-                            </label>
-                            {param.type === 'slider' ?
-                                <p className="text-gray-600">
-                                    {parameters[param.name] || param.default} {param.unit ? `${param.unit}` : ''}
-                                </p>
-                                : null}
-                            {param.type === 'slider' && (
-                                <input
-                                    type="range"
-                                    min={param.min}
-                                    max={param.max}
-                                    defaultValue={param.default}
-                                    onChange={(e) => updateParameter(param.name, parseInt(e.target.value))}
-                                    className="w-full h-2 bg-gray-400 rounded-lg appearance-none cursor-pointer slider"
-                                />
-                            )}
-                            {param.type === 'color' && (
-                                <input
-                                    type="color"
-                                    defaultValue={param.default}
-                                    onChange={(e) => updateParameter(param.name, e.target.value)}
-                                    className="w-full h-10 rounded-lg border border-gray-200 cursor-pointer"
-                                />
-                            )}
-                            {param.type === 'select' && (
-                                <select
-                                    defaultValue={param.default}
-                                    onChange={(e) => updateParameter(param.name, e.target.value)}
-                                    className="w-full h-10 rounded-lg border border-gray-200 text-gray-700 px-3 bg-white cursor-pointer"
-                                >
-                                    {param.options?.map((option) => (
-                                        <option key={option} value={option}>
-                                            {option}
-                                        </option>
-                                    ))}
-                                </select>
-                            )}
-                        </div>
-                    ))}
+                    {selectedEffect.parameters.map((param) => {
+                        return (
+                            <div key={param.name} className="space-y-2">
+                                {param.type === 'individual-colors'
+                                    ? <>
+                                        <div className="space-y-3">
+                                            {/* Toggle for individual vs group control */}
+                                            <div className="flex items-center justify-between">
+                                                <label className="text-xs font-medium text-gray-600">
+                                                    Control Individual
+                                                </label>
+                                                <button
+                                                    onClick={() => setIsIndividualMode(!isIndividualMode)}
+                                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
+                                                        isIndividualMode ? 'bg-purple-600' : 'bg-gray-200'
+                                                    }`}
+                                                >
+                                            <span
+                                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                                    isIndividualMode ? 'translate-x-6' : 'translate-x-1'
+                                                }`}
+                                            />
+                                                </button>
+                                            </div>
+
+                                            {/* Individual color controls */}
+                                            {isIndividualMode && (
+                                                <div className="space-y-3 p-3 bg-gray-50 rounded-lg">
+                                                    {(['left', 'center', 'right'] as const).map((lightId) => (
+                                                        <div key={lightId} className="flex items-center gap-3">
+                                                            <label
+                                                                className="text-xs font-medium text-gray-600 w-16 capitalize">
+                                                                {lightId === 'left' ? 'Izquierda' : lightId === 'center' ? 'Centro' : 'Derecha'}
+                                                            </label>
+                                                            <input
+                                                                type="color"
+                                                                value={individualColors[lightId]}
+                                                                onChange={(e) => updateIndividualColor(lightId, e.target.value)}
+                                                                className="w-[80%] h-8 rounded-md border border-gray-200 cursor-pointer"
+                                                            />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </>
+                                    : (
+                                        <>
+                                            {!(param.type === 'color' && isIndividualMode) && (
+                                                <label className="text-xs font-medium text-gray-600 capitalize">
+                                                    {param.name}
+                                                </label>)}
+                                            {param.type === 'slider' ?
+                                                <p className="text-gray-600">
+                                                    {parameters[param.name] || param.default} {param.unit ? `${param.unit}` : ''}
+                                                </p>
+                                                : null}
+                                            {param.type === 'slider' && (
+                                                <input
+                                                    type="range"
+                                                    min={param.min}
+                                                    max={param.max}
+                                                    defaultValue={param.default}
+                                                    onChange={(e) => updateParameter(param.name, parseInt(e.target.value))}
+                                                    className="w-full h-2 bg-gray-400 rounded-lg appearance-none cursor-pointer slider"
+                                                />
+                                            )}
+                                            {param.type === 'color' && !isIndividualMode && (
+                                                <input
+                                                    type="color"
+                                                    defaultValue={param.default}
+                                                    onChange={(e) => updateParameter(param.name, e.target.value)}
+                                                    className="w-full h-10 rounded-lg border border-gray-200 cursor-pointer"
+                                                />
+                                            )}
+                                            {param.type === 'select' && (
+                                                <select
+                                                    defaultValue={param.default}
+                                                    onChange={(e) => updateParameter(param.name, e.target.value)}
+                                                    className="w-full h-10 rounded-lg border border-gray-200 text-gray-700 px-3 bg-white cursor-pointer"
+                                                >
+                                                    {param.options?.map((option) => (
+                                                        <option key={option} value={option}>
+                                                            {option}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            )}
+                                        </>
+                                    )}
+                            </div>
+                        )
+                    })}
                 </div>
             )}
 

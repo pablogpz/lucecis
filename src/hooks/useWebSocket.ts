@@ -35,8 +35,13 @@ interface ClientMessage {
     type: 'action' | 'subscribe';
     action?: 'toggle' | 'color' | 'strobe' | 'effect';
     data?: {
+        isIndividualMode?: boolean;
         rgb_color?: [number, number, number];
         brightness?: number;
+        individualLights?: {
+            entity_id: string;
+            rgb_color: [number, number, number];
+        }[];
         effect_name?: string;
         duration?: number;
     };
@@ -50,6 +55,11 @@ const ENTITY_TO_LIGHT_ID = {
     'light.hue_go': 'center',
     'light.hue_play_left': 'left',
     'light.hue_play_right': 'right',
+};
+const LIGHT_ID_TO_ENTITY = {
+    'left': 'light.hue_play_left',
+    'center': 'light.hue_go',
+    'right': 'light.hue_play_right'
 };
 
 // Messages for color effects
@@ -212,16 +222,37 @@ export function useWebSocketConnection() {
                 setMessage('Apagando las luses!');
                 break;
             case 'color':
-                if (parameters.color && parameters.intensidad !== undefined) {
+                if (parameters.isIndividualMode && parameters.individualColors) {
+                    const individualLights = Object.entries(parameters.individualColors)
+                        .map(([lightId, color]) => ({
+                            entity_id: LIGHT_ID_TO_ENTITY[lightId as keyof typeof LIGHT_ID_TO_ENTITY],
+                            rgb_color: hexToRgb(color as string),
+                            brightness: Math.round(parameters.intensidad || 255)
+                        }));
+
+                    sendMessage({
+                        type: 'action',
+                        action: 'color',
+                        data: {
+                            isIndividualMode: true,
+                            individualLights
+                        }
+                    });
+                } else if (parameters.color && parameters.intensidad !== undefined) {
+                    // Group control mode (existing behavior)
                     const rgb = hexToRgb(parameters.color);
                     const brightness = Math.round(parameters.intensidad);
                     sendMessage({
                         type: 'action',
                         action: 'color',
-                        data: { rgb_color: rgb, brightness }
+                        data: {
+                            isIndividualMode: false,
+                            rgb_color: rgb,
+                            brightness
+                        }
                     });
-                    setMessage(COLOR_EFFECT_MESSAGES[Math.floor(Math.random() * 10) % COLOR_EFFECT_MESSAGES.length]);
                 }
+                setMessage(COLOR_EFFECT_MESSAGES[Math.floor(Math.random() * 10) % COLOR_EFFECT_MESSAGES.length]);
                 break;
             case 'parpadear':
                 sendMessage({
@@ -253,6 +284,7 @@ export function useWebSocketConnection() {
                 wsRef.current.close();
             }
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     return {

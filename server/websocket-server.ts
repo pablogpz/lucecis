@@ -73,8 +73,14 @@ interface ClientMessage {
     type: 'action' | 'subscribe';
     action?: 'toggle' | 'color' | 'strobe' | 'effect';
     data?: {
+        isIndividualMode?: boolean;
         rgb_color?: [number, number, number];
         brightness?: number;
+        individualLights?: {
+            entity_id: string;
+            rgb_color: [number, number, number];
+            brightness: number;
+        }[];
         effect_name?: string;
         duration?: number; // in seconds
     };
@@ -386,7 +392,23 @@ class LightControlServer {
                 break;
 
             case 'color':
-                if (message.data?.rgb_color) {
+                if (message.data?.isIndividualMode && message.data?.individualLights) {
+                    // Individual light control mode - send commands to each light separately
+                    for (const lightConfig of message.data.individualLights) {
+                        await callService(
+                            this.haConnection,
+                            'light',
+                            'turn_on',
+                            {
+                                rgb_color: lightConfig.rgb_color,
+                                brightness: lightConfig.brightness
+                            },
+                            { entity_id: lightConfig.entity_id },
+                            false
+                        );
+                    }
+                } else if (message.data?.rgb_color) {
+                    // Group control mode (existing behavior)
                     await callService(
                         this.haConnection,
                         'light',

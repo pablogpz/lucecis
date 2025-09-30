@@ -111,8 +111,27 @@ The backend acts as a secure bridge between the frontend and Home Assistant:
   conflicts. A generous timeout ensures the button re-enables even if communication is lost.
 * **Light Actions**:
     - Toggle: Calls `light.toggle` service
-    - Color: Calls `light.turn_on` with RGB and brightness parameters
+    - Color: Supports both group and individual light control modes:
+        - **Group Mode** (default): Calls `light.turn_on` service with RGB and brightness parameters on
+          `light.better_dormitorio_group`
+        - **Individual Mode**: Calls `light.turn_on` service separately for each light entity (`light.hue_play_left`,
+          `light.hue_play_right`, `light.hue_go`) with their respective colors and brightness
     - Strobe/Effects: Calls `script.turn_on` with effect name and duration
+
+#### Individual Light Control Protocol
+
+The color action has been enhanced to support individual light control:
+
+* **Toggle Switch**: Frontend provides a toggle in the Color tab to switch between group and individual control modes
+* **Individual Color Pickers**: When individual mode is enabled, three separate color pickers are displayed for left,
+  center, and right lights
+* **Message Format**: Color action messages include:
+    - `isIndividualMode: boolean` - indicates if individual control is active
+    - `individualLights: Array` - when in individual mode, contains array of objects with `entity_id`, `rgb_color`, and
+      `brightness` for each light
+    - Traditional `rgb_color` and `brightness` fields are used for group mode
+* **Server Processing**: Backend detects individual mode and sends separate `light.turn_on` service calls to each
+  specified entity instead of using the light group
 
 ## Security Features
 
