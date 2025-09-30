@@ -10,6 +10,7 @@ import {
 import dotenv from 'dotenv';
 import { incrementMetric, updateMetric } from './metrics';
 import { metricsServer } from './metrics-server'
+import { IncomingMessage } from 'node:http'
 
 // Disable SSL verification for self-signed certificates
 process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
@@ -130,19 +131,19 @@ class LightControlServer {
     }
 
     private setupWebSocketServer() {
-        this.wss.on('connection', (ws: WebSocket) => {
-            console.log('Client connected');
-            this.clients.add(ws);
+        this.wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
+            const remoteAddress = req.headers['x-forwarded-for'] || req.socket.localAddress
+            console.log(`Client connected (${remoteAddress})`);
 
-            // Send current states to new client
-            this.sendCurrentStates(ws);
+            this.clients.add(ws);
+            this.sendCurrentStates(ws); // Send current states to new client
 
             ws.on('message', (message: string) => {
                 let data: ClientMessage | undefined = undefined;
                 try {
                     data = JSON.parse(message);
                 } catch (error) {
-                    console.error('Error parsing message:', error);
+                    console.error(`[Source:${remoteAddress}] Error parsing message: `, error);
                     this.sendError(ws, 'Invalid message format');
                     return;
                 }
@@ -155,13 +156,13 @@ class LightControlServer {
             });
 
             ws.on('close', () => {
-                console.log('Client disconnected');
+                console.log(`Client disconnected (${remoteAddress})`);
                 this.clients.delete(ws);
                 updateMetric('websocket_connections', this.clients.size);
             });
 
             ws.on('error', (error) => {
-                console.error('WebSocket error:', error);
+                console.error(`[Source:${remoteAddress}] WebSocket error: `, error);
                 this.clients.delete(ws);
                 updateMetric('websocket_connections', this.clients.size);
             });
