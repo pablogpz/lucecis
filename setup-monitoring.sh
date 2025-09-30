@@ -125,11 +125,15 @@ else
 fi
 
 # Install Grafana
-print_status "📈 Installing Grafana..."
-wget -q -O - https://packages.grafana.com/gpg.key | sudo apt-key add -
-echo "deb https://packages.grafana.com/oss/deb stable main" | sudo tee /etc/apt/sources.list.d/grafana.list
-sudo apt update
-sudo apt install -y grafana
+if ! command -v grafana-server &> /dev/null; then
+  print_status "📈 Installing Grafana..."
+  wget -q -O - https://packages.grafana.com/gpg.key | sudo apt-key add -
+  echo "deb https://packages.grafana.com/oss/deb stable main" | sudo tee /etc/apt/sources.list.d/grafana.list
+  sudo apt update
+  sudo apt install -y grafana
+else
+  print_status "📈 Grafana already installed, skipping..."
+fi
 
 # Copy configuration files
 print_status "⚙️ Setting up configuration files..."
@@ -174,14 +178,11 @@ sleep 10
 
 # Import Grafana dashboards
 print_status "📊 Setting up Grafana dashboards..."
-# Wait for Grafana to be ready
-while ! curl -s http://localhost:9000 > /dev/null; do
+while ! curl -s http://localhost:9000/grafana > /dev/null; do
     print_status "Waiting for Grafana to start..."
     sleep 5
 done
-
-# Configure Grafana data source and dashboards
-python3 setup-grafana.py
+python3 setup-grafana.py # Configure Grafana data source and dashboards
 
 # Add firewall rules
 print_status "🛡️ Configuring firewall..."
@@ -201,9 +202,7 @@ echo "   Password: admin"
 echo "   (You'll be prompted to change this on first login)"
 echo ""
 echo "📊 Pre-configured dashboards:"
-echo "   - System Overview"
-echo "   - Lucecis App Metrics"
-echo "   - Home Assistant Integration"
+echo "   - Lucecis Overview"
 echo ""
 echo "🔧 Service management:"
 echo "   sudo systemctl status prometheus"

@@ -1,0 +1,275 @@
+{
+  "apiVersion": 1,
+  "groups": [
+    {
+      "orgId": 1,
+      "name": "Lucecis Connectivity",
+      "folder": "Lucecis",
+      "interval": "1m",
+      "rules": [
+        {
+          "title": "HA Connection Status",
+          "condition": "C",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 3600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "adhocFilters": [],
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "disableTextWrap": false,
+                "editorMode": "builder",
+                "expr": "lucecis_homeassistant_connection_status{job=\"lucecis-metrics-server\", instance=\"localhost:3020\"}",
+                "fullMetaSearch": false,
+                "includeNullMetadata": true,
+                "instant": true,
+                "interval": "",
+                "intervalMs": 15000,
+                "legendFormat": "HA Connection",
+                "maxDataPoints": 43200,
+                "range": false,
+                "refId": "A",
+                "useBackend": false
+              }
+            },
+            {
+              "refId": "C",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "params": [
+                        0
+                      ],
+                      "type": "eq"
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "query": {
+                      "params": [
+                        "C"
+                      ]
+                    },
+                    "reducer": {
+                      "params": [],
+                      "type": "last"
+                    },
+                    "type": "query"
+                  }
+                ],
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "expression": "A",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "C",
+                "type": "threshold"
+              }
+            }
+          ],
+          "noDataState": "Alerting",
+          "execErrState": "Alerting",
+          "for": "3m",
+          "annotations": {
+            "description": "Lucecis' WebSocket Server has lost connection to the Home Assistant instance and couldn't automatically reconnect (or there's no more metrics data)",
+            "summary": "Persistent WS session with HA WS API has been severed for more than 3 minutes"
+          },
+          "isPaused": false,
+          "notification_settings": {
+            "receiver": "pablogpz"
+          }
+        },
+        {
+          "title": "Lucecis WSS Health",
+          "condition": "C",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 3600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "adhocFilters": [],
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "disableTextWrap": false,
+                "editorMode": "builder",
+                "expr": "probe_success{job=\"blackbox\", instance=\"http://localhost:3020/health\"}",
+                "fullMetaSearch": false,
+                "includeNullMetadata": true,
+                "instant": true,
+                "interval": "",
+                "intervalMs": 15000,
+                "legendFormat": "WSS Health",
+                "maxDataPoints": 43200,
+                "range": false,
+                "refId": "A",
+                "useBackend": false
+              }
+            },
+            {
+              "refId": "C",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "params": [
+                        0
+                      ],
+                      "type": "eq"
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "query": {
+                      "params": [
+                        "C"
+                      ]
+                    },
+                    "reducer": {
+                      "params": [],
+                      "type": "last"
+                    },
+                    "type": "query"
+                  }
+                ],
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "expression": "A",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "C",
+                "type": "threshold"
+              }
+            }
+          ],
+          "noDataState": "Alerting",
+          "execErrState": "Alerting",
+          "for": "3m",
+          "annotations": {
+            "description": "Lucecis' WebSocket Server health check endpoint has detected a problem or there's no new metrics data",
+            "summary": "Lucecis WSS is failing health checks"
+          },
+          "isPaused": false,
+          "notification_settings": {
+            "receiver": "pablogpz"
+          }
+        },
+        {
+          "title": "Lucecis App Health",
+          "condition": "C",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 3600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "adhocFilters": [],
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "disableTextWrap": false,
+                "editorMode": "builder",
+                "expr": "probe_success{job=\"blackbox\", instance=\"http://localhost:3000/lucecis/health\"}",
+                "fullMetaSearch": false,
+                "includeNullMetadata": true,
+                "instant": true,
+                "interval": "",
+                "intervalMs": 15000,
+                "legendFormat": "App Health",
+                "maxDataPoints": 43200,
+                "range": false,
+                "refId": "A",
+                "useBackend": false
+              }
+            },
+            {
+              "refId": "C",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "params": [
+                        0
+                      ],
+                      "type": "eq"
+                    },
+                    "operator": {
+                      "type": "and"
+                    },
+                    "query": {
+                      "params": [
+                        "C"
+                      ]
+                    },
+                    "reducer": {
+                      "params": [],
+                      "type": "last"
+                    },
+                    "type": "query"
+                  }
+                ],
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "expression": "A",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "C",
+                "type": "threshold"
+              }
+            }
+          ],
+          "noDataState": "Alerting",
+          "execErrState": "Alerting",
+          "for": "3m",
+          "annotations": {
+            "description": "Lucecis' web app health check endpoint has detected a problem or there's no new metrics data",
+            "summary": "Lucecis App is failing health checks"
+          },
+          "isPaused": false,
+          "notification_settings": {
+            "receiver": "pablogpz"
+          }
+        }
+      ]
+    }
+  ]
+}
+

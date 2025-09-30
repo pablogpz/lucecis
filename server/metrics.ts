@@ -1,5 +1,5 @@
 // Simple in-memory metrics store
-export const metrics = {
+const metrics = {
     websocket_connections: 0,
     websocket_messages_sent: 0,
     websocket_messages_received: 0,
@@ -8,7 +8,7 @@ export const metrics = {
     presence_status: 0,                 // 0 = away, 1 = present
     light_commands_sent: 0,
     uptime_seconds: 0,
-    last_light_command_timestamp: 0,
+    last_light_command_timestamp: Date.now(),
     do_not_disturb_active: 0,           // 0 = inactive, 1 = active
 }
 
@@ -19,7 +19,6 @@ export function updateMetric(key: keyof typeof metrics, value: number) {
 export function incrementMetric(key: keyof typeof metrics) {
     metrics[key]++;
 }
-
 
 export function getPrometheusMetrics(): string {
     const PROMETHEUS_KEY = 'lucecis';

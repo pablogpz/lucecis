@@ -9,12 +9,13 @@
 - **Promtail** - Log collection agent
 - **Blackbox Exporter** - HTTP/HTTPS endpoint monitoring for health checks
 - **Custom App Metrics** - WebSocket connections, Home Assistant status
+- **Alert Rules** - Automated monitoring and notifications
 
 ## Architecture
 
 ```
 Raspberry Pi 5
-├── Grafana (port 9000) - Dashboards and visualization
+├── Grafana (port 9000) - Dashboards, visualization, and alerting
 ├── Prometheus (port 9090) - Metrics database
 ├── Node Exporter (port 9100) - System metrics
 ├── Loki (port 9095) - Log aggregation
@@ -37,45 +38,65 @@ Raspberry Pi 5
     - URL: `http://localhost:9000/grafana/`
     - Default login: admin/admin (change on first login)
 
-3. **Pre-configured dashboards and data sources are imported automatically**
+3. **Pre-configured dashboards, data sources, and alert rules are imported automatically**
 
-## Available Dashboards
+## Lucecis Overview Dashboard
 
-### 1. System Overview
+### ROW 1. System Overview
 
 - CPU, Memory, Disk usage
 - Network traffic
 - System temperature
-- Real-time system health
 
-### 2. Lucecis App Metrics
+### ROW 2. Lucecis App Metrics
 
+- App uptime
 - WebSocket connections count
+- Light command rates
 - Message rates (sent/received)
+- Real-time system health
+- App logs
+- PM2 logs
+
+### ROW 3. Home Assistant Integration
+
 - Home Assistant connection status
 - Presence detection status
 - Do Not Disturb status
-- Light command rates
-- App uptime
-
-### 3. Home Assistant Integration
-
-- Connection status over time
 - API call rates
-- Presence and DND correlation
 
-### 4. Logs Overview
+### ROW 4. Logs Overview
 
-- PM2 logs
-- Application logs (PM2 managed)
 - NGINX access and error logs
-- Log rates and error rates
-- Real-time log streaming
+- Error rates
+- Suspicious activity detection
 
-## Data Sources
+## Alert Rules
 
-- **Prometheus** (http://localhost:9090) - Metrics
-- **Loki** (http://localhost:9095) - Logs
+The system includes automated alert rules for monitoring critical aspects of Lucecis:
+
+### Connectivity Alerts
+
+- **HA Connection Status**: Monitors the WebSocket connection to Home Assistant
+    - Triggers when connection is lost for more than 3 minutes
+    - Indicates potential issues with HA API or network connectivity
+
+- **Lucecis WSS Health**: Monitors the WebSocket server health endpoint
+    - Triggers when health checks fail for more than 3 minutes
+    - Indicates server or application issues
+
+- **Lucecis App Health**: Monitors the Next.js application health endpoint
+    - Triggers when app health checks fail for more than 3 minutes
+    - Indicates frontend application issues
+
+### Security Alerts
+
+- **Lucecis Intrusion Detection**: Monitors NGINX access logs for foreign IP addresses
+    - Triggers when non-local IP addresses access the system
+    - Excludes local network ranges (192.168.5.x, 192.168.6.x) and known safe IPs
+    - Fires for 12 hours to ensure immediate attention
+
+All alert rules are stored in the `alerts/` directory and automatically imported during setup.
 
 ## Log Collection
 
@@ -150,6 +171,36 @@ If dashboards don't import automatically:
 
 1. Go to Grafana → Dashboards → Import
 2. Upload the JSON files from `dashboards/` directory:
-    - `system-overview.json`
-    - `lucecis-app.json`
-    - `homeassistant.json`
+    - `lucecis-overview.json`
+
+## Manual Alert Rules Import
+
+If alert rules don't import automatically:
+
+1. Go to Grafana → Alerting → Alert Rules
+2. Click "Import" or "New Rule"
+3. Upload the JSON files from `alerts/` directory:
+    - `lucecis-connectivity.json` - Health and connectivity monitoring
+    - `lucecis-security.json` - Security and intrusion detection
+
+## Alert Configuration
+
+To receive notifications:
+
+1. Go to Grafana → Alerting → Contact Points
+2. Configure your preferred notification method (email, Slack, webhook, etc.)
+3. Create a notification policy to route alerts to your contact point
+4. The alert rules reference a receiver named "pablogpz" - update this to match your contact point name
+
+## File Structure
+
+```
+lucecis/
+├── alerts/                     # Alert rule definitions
+│   ├── lucecis-connectivity.json
+│   └── lucecis-security.json
+├── dashboards/                 # Dashboard definitions
+│   └── lucecis-overview.json
+├── setup-grafana.py           # Automated Grafana setup script
+└── setup-monitoring.sh        # Monitoring stack setup script
+```
