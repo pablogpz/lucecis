@@ -180,7 +180,7 @@ class LightControlServer {
             }
 
             const auth = createLongLivedTokenAuth(HA_URL, ACCESS_TOKEN);
-            this.haConnection = await createConnection({ auth });
+            this.haConnection = await createConnection({ auth, setupRetry: -1 });
             this.broadcastConnectionStatus(true);
 
             console.log('Connected to Home Assistant');
