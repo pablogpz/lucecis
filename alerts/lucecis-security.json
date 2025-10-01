@@ -15,7 +15,7 @@
               "refId": "A",
               "queryType": "range",
               "relativeTimeRange": {
-                "from": 86400,
+                "from": 3600,
                 "to": 0
               },
               "datasourceUid": "loki",
